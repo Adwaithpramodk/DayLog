@@ -223,6 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       showLoading(true);
       state.isLoggingIn = true;
+      localStorage.removeItem("daylog_logged_out"); // UNLOCK IMMEDIATELY
       console.log("Attempting Login...", { email, mode });
       
       if (mode === "login") {
