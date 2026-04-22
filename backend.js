@@ -68,5 +68,28 @@ export const dbActions = {
             console.error("CRITICAL SAVE ERROR:", e);
             alert("Database Error: Make sure you added the 'schedule' attribute in Appwrite Console!");
         }
+    },
+    async getHistory(uid) {
+        try {
+            const res = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.orderDesc('date'),
+                Query.limit(14)
+            ]);
+            const history = {};
+            res.documents.forEach(doc => {
+                history[doc.date] = {
+                    score: parseInt(doc.score || 0),
+                    tasks: JSON.parse(doc.tasks || '[]'),
+                    habits: JSON.parse(doc.habits || '{}'),
+                    schedule: JSON.parse(doc.schedule || '[]'),
+                    notes: doc.notes || ""
+                };
+            });
+            return history;
+        } catch (e) {
+            console.error("getHistory Error:", e);
+            return {};
+        }
     }
 };
