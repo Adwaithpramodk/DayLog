@@ -6,7 +6,7 @@ const state = {
   email: null,
   today: new Date().toISOString().split("T")[0],
   activeDate: new Date().toISOString().split("T")[0],
-  dayData: { tasks: [], habits: {}, notes: "", score: 0 },
+  dayData: { tasks: [], habits: {}, schedule: [], notes: "", score: 0 },
   history: {},
   settings: { habits: ["Exercise", "Read", "Meditate", "Water", "Sleep 8h"] },
   isLoggingIn: false
@@ -39,7 +39,8 @@ async function loadDayData(date) {
     state.dayData = {
       ...data,
       tasks: typeof data.tasks === 'string' ? JSON.parse(data.tasks) : data.tasks,
-      habits: typeof data.habits === 'string' ? JSON.parse(data.habits) : data.habits
+      habits: typeof data.habits === 'string' ? JSON.parse(data.habits) : data.habits,
+      schedule: typeof data.schedule === 'string' ? JSON.parse(data.schedule) : (data.schedule || [])
     };
   } else {
     state.dayData = { tasks: [], habits: {}, notes: "", score: 0 };
@@ -157,9 +158,82 @@ function renderAll() {
     }
 
     if ($("#notes-area")) $("#notes-area").value = state.dayData.notes || "";
+
+    renderSchedule();
   } catch (err) {
     console.error("Render error:", err);
   }
+}
+
+function renderSchedule() {
+  const list = $("#schedule-list");
+  if (!list) return;
+  list.innerHTML = "";
+  
+  const now = new Date();
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+
+  // Sort by start time
+  state.dayData.schedule.sort((a, b) => {
+    return timeToMin(a.start) - timeToMin(b.start);
+  });
+
+  let doneCount = 0;
+  state.dayData.schedule.forEach((slot, i) => {
+    if (slot.done) doneCount++;
+    
+    const startMin = timeToMin(slot.start);
+    const endMin = timeToMin(slot.end);
+    const isActive = currentTime >= startMin && currentTime < endMin && state.activeDate === state.today;
+
+    const div = document.createElement("div");
+    div.className = `schedule-slot ${isActive ? "active" : ""} ${slot.done ? "done" : ""}`;
+    div.innerHTML = `
+      <div class="slot-time-group">
+        <input type="text" class="slot-time-input" value="${slot.start}" data-key="start" data-index="${i}">
+        <span>–</span>
+        <input type="text" class="slot-time-input" value="${slot.end}" data-key="end" data-index="${i}">
+      </div>
+      <input type="text" class="slot-task-input" placeholder="Task..." value="${slot.task}" data-index="${i}">
+      <input type="checkbox" ${slot.done ? "checked" : ""} data-index="${i}" class="slot-check">
+      <button class="btn-delete" data-index="${i}">×</button>
+    `;
+
+    // Event Listeners for inline editing
+    div.querySelector(".slot-check").onchange = (e) => {
+      state.dayData.schedule[i].done = e.target.checked;
+      renderSchedule();
+      debouncedSync();
+    };
+    div.querySelectorAll(".slot-time-input").forEach(input => {
+      input.onchange = (e) => {
+        state.dayData.schedule[i][e.target.dataset.key] = e.target.value;
+        renderSchedule();
+        debouncedSync();
+      };
+    });
+    div.querySelector(".slot-task-input").onchange = (e) => {
+      state.dayData.schedule[i].task = e.target.value;
+      debouncedSync();
+    };
+    div.querySelector(".btn-delete").onclick = () => {
+      state.dayData.schedule.splice(i, 1);
+      renderSchedule();
+      debouncedSync();
+    };
+
+    list.appendChild(div);
+  });
+
+  // Progress
+  const progress = state.dayData.schedule.length ? Math.round((doneCount / state.dayData.schedule.length) * 100) : 0;
+  if ($("#schedule-progress")) $("#schedule-progress").textContent = `${progress}%`;
+}
+
+function timeToMin(timeStr) {
+  if (!timeStr) return 0;
+  const [h, m] = timeStr.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
 }
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -301,6 +375,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const isDark = document.body.classList.toggle("dark");
     document.body.classList.toggle("light", !isDark);
     localStorage.setItem("daylog_theme", isDark ? "dark" : "light");
+  };
+
+  $("#btn-add-slot").onclick = () => {
+    const lastSlot = state.dayData.schedule[state.dayData.schedule.length - 1];
+    let start = "09:00", end = "10:00";
+    if (lastSlot) {
+      start = lastSlot.end;
+      const [h, m] = lastSlot.end.split(":").map(Number);
+      end = `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+    state.dayData.schedule.push({ start, end, task: "", done: false });
+    renderSchedule();
+    debouncedSync();
   };
 
   // Add Habit Form

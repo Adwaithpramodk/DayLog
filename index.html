@@ -81,6 +81,20 @@
 
       <div class="tab-content">
         <div id="panel-dashboard" class="tab-panel active">
+          <!-- Schedule Section -->
+          <div class="card">
+            <div class="card-title">
+              <span>Today's Schedule</span>
+              <div id="schedule-progress" class="badge-accent">0%</div>
+            </div>
+            <div class="schedule-container">
+              <div id="schedule-list" class="schedule-list">
+                <!-- Slots will be rendered here -->
+              </div>
+              <button id="btn-add-slot" class="btn-secondary" style="margin-top: 15px; width: 100%;">+ Add Time Slot</button>
+            </div>
+          </div>
+
           <div class="card">
             <h2 class="card-title">Habits</h2>
             <div id="habit-grid" class="habit-grid"></div>
