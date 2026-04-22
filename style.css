@@ -793,62 +793,60 @@ body.dark .btn-danger-outline {
   .header-nav .nav-item { font-size: 12px; }
 }
 
-/* ── Mobile Responsiveness ────────────────────────────────── */
+/* ── Mobile Responsiveness (Comprehensive) ────────────────── */
 @media (max-width: 600px) {
-  .app-header { padding: 24px 20px 16px; gap: 16px; }
-  .header-logo { font-size: 28px; }
+  .app-header { 
+    padding: 16px 16px 12px; 
+    gap: 12px; 
+  }
+  .header-logo { font-size: 26px; }
   .header-action-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+    display: flex;
+    flex-direction: row; /* Back to row */
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
   }
   .header-nav {
-    width: 100%;
+    flex: 1;
     overflow-x: auto;
-    padding: 2px;
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Hide scrollbar for clean look */
   }
+  .header-nav::-webkit-scrollbar { display: none; }
+  
   .header-nav .nav-item {
     padding: 8px 12px;
-    font-size: 11px;
+    font-size: 13px;
     white-space: nowrap;
+    background: var(--surface-2); /* Give them a light background to look like tabs */
+    flex-shrink: 0;
   }
   .header-quick-actions {
-    width: 100%;
-    justify-content: flex-end;
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
   }
-  .app-main { padding: 0 16px 100px; }
-  
-  .score-container { padding: 24px 20px; }
-  .score-value-container { font-size: 44px; }
-  
-  .stats-grid { grid-template-columns: 1fr; gap: 12px; }
-  
-  .schedule-slot { 
-    flex-wrap: wrap; 
-    padding: 10px; 
-    gap: 8px;
-  }
-  .slot-time-group { width: 100%; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 4px; }
-  .slot-task-input { font-size: 16px; } /* Prevent iOS zoom */
-  
-  .card { padding: 20px 16px; border-radius: 20px; }
-  .card-title { font-size: 18px; }
+  .btn-icon-sm { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
 
-  .report-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: 1fr; }
-  
-  .current-date-display { font-size: 22px; }
-  
-  .overlay-content { 
-    padding: 24px 16px 40px; 
-    border-top-left-radius: 24px;
-    border-top-right-radius: 24px;
+  /* Heatmap Card Internal Scroll */
+  .card .heatmap-container {
+    margin: 0; /* Remove the bleed */
+    padding: 0;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  
-  .book-header { flex-direction: column; gap: 4px; }
-  .book-stats { font-size: 12px; }
-  
-  .btn-icon-sm { width: 40px; height: 40px; font-size: 16px; }
+  .month-wrapper {
+    flex: 0 0 160px; /* Keep them compact */
+  }
+
+  .app-main { padding: 0 16px 100px; }
+  .card { padding: 20px 16px; border-radius: 20px; overflow: hidden; }
 }
 
 /* Fix for ultra-small phones */
