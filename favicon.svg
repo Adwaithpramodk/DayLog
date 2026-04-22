@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background rounded square -->
+  <rect width="32" height="32" rx="7" fill="#1c1b19"/>
+
+  <!-- Amber accent ring / arc (top-right quarter) -->
+  <circle cx="16" cy="16" r="9" fill="none" stroke="#2e2c28" stroke-width="2.5"/>
+  <circle cx="16" cy="16" r="9" fill="none" stroke="#f59e0b" stroke-width="2.5"
+          stroke-dasharray="18 38" stroke-dashoffset="-9"
+          stroke-linecap="round"/>
+
+  <!-- Center "D" monogram in DM Serif style — simplified as bold letter -->
+  <text x="16" y="21" font-family="Georgia, serif" font-size="13" font-weight="700"
+        fill="#f5f2ec" text-anchor="middle" letter-spacing="-0.5">D</text>
+</svg>
