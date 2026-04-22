@@ -700,26 +700,26 @@ body.dark .btn-danger-outline {
 .app-header {
   padding: 32px 24px 20px;
   background: var(--bg);
-  position: relative; /* Scrolls away with content */
+  position: relative;
   z-index: 100;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-areas: 
+    "logo logo"
+    "nav actions";
+  grid-template-columns: 1fr auto;
   gap: 20px;
+  align-items: center;
 }
 .header-logo {
+  grid-area: logo;
   font-family: var(--font-display);
   font-size: 36px;
   font-weight: 700;
   color: var(--accent);
   letter-spacing: -1px;
 }
-.header-action-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
 .header-nav {
+  grid-area: nav;
   display: flex;
   gap: 12px;
   align-items: center;
@@ -738,6 +738,7 @@ body.dark .btn-danger-outline {
   box-shadow: 0 4px 15px rgba(0,0,0,0.06);
 }
 .header-quick-actions {
+  grid-area: actions;
   display: flex;
   gap: 12px;
 }
@@ -796,54 +797,49 @@ body.dark .btn-danger-outline {
 /* ── Mobile Responsiveness (Comprehensive) ────────────────── */
 @media (max-width: 600px) {
   .app-header { 
-    padding: 16px 16px 12px; 
-    gap: 12px; 
+    padding: 24px 16px 16px; 
+    gap: 16px; 
+    grid-template-areas: 
+      "logo actions"
+      "nav nav";
+    grid-template-columns: 1fr auto;
   }
-  .header-logo { font-size: 26px; }
-  .header-action-row {
-    display: flex;
-    flex-direction: row; /* Back to row */
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-  }
-  .header-nav {
-    flex: 1;
-    overflow-x: auto;
-    display: flex;
-    gap: 4px;
-    padding: 4px 0;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Hide scrollbar for clean look */
-  }
-  .header-nav::-webkit-scrollbar { display: none; }
-  
-  .header-nav .nav-item {
-    padding: 8px 12px;
-    font-size: 13px;
-    white-space: nowrap;
-    background: var(--surface-2); /* Give them a light background to look like tabs */
-    flex-shrink: 0;
-  }
-  .header-quick-actions {
-    display: flex;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-  .btn-icon-sm { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
+  .header-logo { font-size: 28px; }
 
-  /* Heatmap Card Internal Scroll */
-  .card .heatmap-container {
-    margin: 0; /* Remove the bleed */
-    padding: 0;
+  /* Professional 4-Column Navigation Grid */
+  .header-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: var(--surface-2);
+    padding: 4px;
+    border-radius: 14px;
     width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
-  .month-wrapper {
-    flex: 0 0 160px; /* Keep them compact */
+  .header-nav .nav-item {
+    padding: 10px 0;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    border-radius: 10px;
   }
+  
+  .header-quick-actions { gap: 8px; }
+  .btn-icon-sm { width: 40px; height: 40px; font-size: 18px; border-radius: 12px; }
+
+  /* Schedule Fix: Prevent checkbox overflow */
+  .schedule-slot {
+    flex-wrap: nowrap;
+    padding: 10px;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .slot-time-group { flex-shrink: 0; }
+  .slot-time-input { width: 55px; font-size: 11px; padding: 4px; }
+  .slot-task-input { font-size: 13px; min-width: 0; } 
+  .schedule-slot .checkmark { flex-shrink: 0; width: 24px !important; height: 24px !important; }
 
   .app-main { padding: 0 16px 100px; }
   .card { padding: 20px 16px; border-radius: 20px; overflow: hidden; }
