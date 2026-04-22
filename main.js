@@ -25,11 +25,13 @@ const debounce = (fn, ms) => {
 };
 
 const toast = (msg, type = "info") => {
+  const icons = { success: "✓", error: "✕", info: "ℹ" };
   const t = document.createElement("div");
-  t.className = `toast toast-${type} show`;
-  t.textContent = msg;
+  t.className = `toast toast-${type}`;
+  t.innerHTML = `<span>${icons[type] || "ℹ"}</span> <span>${msg}</span>`;
   document.body.appendChild(t);
-  setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 400); }, 3000);
+  setTimeout(() => t.classList.add("show"), 10);
+  setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 500); }, 3000);
 };
 
 // ── Data ─────────────────────────────────────────────────────
@@ -197,7 +199,7 @@ function renderHeatmap() {
     const monthName = d.toLocaleString('default', { month: 'long' });
 
     const monthWrapper = document.createElement("div");
-    monthWrapper.style = "margin-bottom: 24px;";
+    monthWrapper.className = "month-wrapper";
     container.appendChild(monthWrapper);
 
     // 1. Month Header
@@ -769,11 +771,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // Handle Tab Switching
+  const updateActiveTabs = (tab) => {
+    document.querySelectorAll(".nav-item").forEach(i => {
+      i.classList.toggle("active", i.dataset.tab === tab);
+    });
+  };
+
   document.querySelectorAll(".nav-item").forEach(item => {
     item.onclick = () => {
       const tab = item.dataset.tab;
-      document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
-      item.classList.add("active");
+      updateActiveTabs(tab);
       document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
       $(`#panel-${tab}`).classList.add("active");
       
@@ -784,6 +791,17 @@ document.addEventListener("DOMContentLoaded", () => {
       if (tab === "roadmap") renderRoadmaps();
       if (tab === "library") renderLibrary();
     };
+  });
+
+  // Dynamic Bottom Nav Scroll Listener
+  window.addEventListener("scroll", () => {
+    const bottomNav = $("#dynamic-bottom-nav");
+    const isAtBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 60);
+    if (isAtBottom) {
+      bottomNav.classList.add("show");
+    } else {
+      bottomNav.classList.remove("show");
+    }
   });
 
   // LIBRARY EVENTS

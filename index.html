@@ -47,15 +47,24 @@
   <div id="app-screen" class="screen">
     <header class="app-header">
       <div class="header-logo">DayLog</div>
-      <div class="header-meta">
-        <div id="sync-status" class="sync-status"></div>
-        <button id="btn-settings" class="btn-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
+      <div class="header-action-row">
+        <nav class="header-nav">
+          <button class="nav-item active" data-tab="dashboard">Today</button>
+          <button class="nav-item" data-tab="report">Report</button>
+          <button class="nav-item" data-tab="roadmap">Roadmap</button>
+          <button class="nav-item" data-tab="library">Library</button>
+        </nav>
+        <div class="header-quick-actions">
+          <button id="btn-toggle-theme" class="btn-icon-sm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+          <button id="btn-settings" class="btn-icon-sm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+          <button id="btn-logout" class="btn-icon-sm">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -152,7 +161,7 @@
             <span id="daily-quote-author">— Mark Twain</span>
           </div>
         </div>
-        <div id="panel-history" class="tab-panel">
+        <div id="panel-report" class="tab-panel">
           <!-- 1. Weekly Report -->
           <div class="card">
             <h2 class="card-title">Weekly Report</h2>
@@ -184,10 +193,10 @@
             <div id="heatmap-container" class="heatmap-container"></div>
             <div class="heatmap-legend">
               <span>Less</span>
-              <div class="heat-square level-0"></div>
-              <div class="heat-square level-1"></div>
-              <div class="heat-square level-2"></div>
-              <div class="heat-square level-3"></div>
+              <div class="legend-square level-0"></div>
+              <div class="legend-square level-1"></div>
+              <div class="legend-square level-2"></div>
+              <div class="legend-square level-3"></div>
               <span>More</span>
             </div>
           </div>
@@ -267,20 +276,13 @@
         </form>
       </div>
     </div>
-
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-tab="dashboard">
-        <span>Today</span>
-      </button>
-      <button class="nav-item" data-tab="roadmap">
-        <span>Roadmap</span>
-      </button>
-      <button class="nav-item" data-tab="library">
-        <span>Library</span>
-      </button>
-      <button class="nav-item" data-tab="history">
-        <span>Report</span>
-      </button>
+    </div>
+    <!-- Dynamic Bottom Nav (Only shows at bottom) -->
+    <nav id="dynamic-bottom-nav" class="bottom-nav">
+      <button class="nav-item" data-tab="dashboard">Today</button>
+      <button class="nav-item" data-tab="report">Report</button>
+      <button class="nav-item" data-tab="roadmap">Roadmap</button>
+      <button class="nav-item" data-tab="library">Library</button>
     </nav>
   </div>
 
