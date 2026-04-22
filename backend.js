@@ -32,14 +32,13 @@ export const dbActions = {
                 Query.equal('uid', uid),
                 Query.equal('date', date)
             ]);
-            return res.documents[0] || { tasks: "[]", habits: "{}", notes: "", score: 0 };
+            return res.documents[0] || { tasks: "[]", habits: "{}", schedule: "[]", notes: "", score: 0 };
         } catch (e) {
             console.warn("DB fetch failed:", e);
             return null;
         }
     },
     async saveDay(uid, date, data) {
-        // Appwrite requires a document ID. We'll find or create.
         try {
             const existing = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
                 Query.equal('uid', uid),
@@ -49,19 +48,25 @@ export const dbActions = {
             const payload = {
                 uid,
                 date,
-                tasks: JSON.stringify(data.tasks),
-                habits: JSON.stringify(data.habits),
-                notes: data.notes,
-                score: data.score
+                tasks: JSON.stringify(data.tasks || []),
+                habits: JSON.stringify(data.habits || {}),
+                schedule: JSON.stringify(data.schedule || []),
+                notes: data.notes || "",
+                score: String(data.score || 0),
+                priorities: "" 
             };
+
+            console.log("Saving to Cloud...", payload);
 
             if (existing.total > 0) {
                 await databases.updateDocument(DATABASE_ID, COLLECTION_ID, existing.documents[0].$id, payload);
             } else {
                 await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), payload);
             }
+            console.log("Save Successful! ✓");
         } catch (e) {
-            console.error("Save failed:", e);
+            console.error("CRITICAL SAVE ERROR:", e);
+            alert("Database Error: Make sure you added the 'schedule' attribute in Appwrite Console!");
         }
     }
 };

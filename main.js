@@ -82,7 +82,11 @@ function renderHistory() {
 }
 
 async function syncDay() {
-  if (!state.uid) return;
+  if (!state.uid || state.uid === "local-user") {
+    console.log("Offline mode: Saving locally only.");
+    localStorage.setItem(`daylog_local_${state.activeDate}`, JSON.stringify(state.dayData));
+    return;
+  }
   state.dayData.score = calculateScore();
   await dbActions.saveDay(state.uid, state.activeDate, state.dayData);
   $("#sync-status").textContent = "Synced ✓";
