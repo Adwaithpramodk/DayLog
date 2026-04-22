@@ -91,5 +91,125 @@ export const dbActions = {
             console.error("getHistory Error:", e);
             return {};
         }
+    },
+    async getSettings(uid) {
+        try {
+            const res = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.equal('date', 'user_settings')
+            ]);
+            if (res.total > 0) {
+                return JSON.parse(res.documents[0].habits || '[]');
+            }
+            return null;
+        } catch (e) {
+            console.error("getSettings Error:", e);
+            return null;
+        }
+    },
+    async saveSettings(uid, habits) {
+        try {
+            const existing = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.equal('date', 'user_settings')
+            ]);
+            const payload = {
+                uid,
+                date: 'user_settings',
+                habits: JSON.stringify(habits),
+                tasks: "[]",
+                schedule: "[]",
+                notes: "SETTINGS_DOC",
+                score: "0",
+                priorities: ""
+            };
+            if (existing.total > 0) {
+                await databases.updateDocument(DATABASE_ID, COLLECTION_ID, existing.documents[0].$id, payload);
+            } else {
+                await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), payload);
+            }
+        } catch (e) {
+            console.error("saveSettings Error:", e);
+        }
+    },
+    async getRoadmaps(uid) {
+        try {
+            const res = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.equal('date', 'user_roadmaps')
+            ]);
+            if (res.total > 0) {
+                return JSON.parse(res.documents[0].tasks || '[]');
+            }
+            return [];
+        } catch (e) {
+            console.error("getRoadmaps Error:", e);
+            return [];
+        }
+    },
+    async saveRoadmaps(uid, roadmaps) {
+        try {
+            const existing = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.equal('date', 'user_roadmaps')
+            ]);
+            const payload = {
+                uid,
+                date: 'user_roadmaps',
+                tasks: JSON.stringify(roadmaps),
+                habits: "{}",
+                schedule: "[]",
+                notes: "ROADMAPS_DOC",
+                score: "0",
+                priorities: ""
+            };
+            if (existing.total > 0) {
+                await databases.updateDocument(DATABASE_ID, COLLECTION_ID, existing.documents[0].$id, payload);
+            } else {
+                await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), payload);
+            }
+        } catch (e) {
+            console.error("saveRoadmaps Error:", e);
+        }
+    },
+    async getLibrary(uid) {
+        try {
+            const res = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.equal('date', 'user_library')
+            ]);
+            if (res.total > 0) {
+                return JSON.parse(res.documents[0].tasks || '[]');
+            }
+            return [];
+        } catch (e) {
+            console.error("getLibrary Error:", e);
+            return [];
+        }
+    },
+    async saveLibrary(uid, library) {
+        try {
+            const existing = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.equal('date', 'user_library')
+            ]);
+            const payload = {
+                uid,
+                date: 'user_library',
+                tasks: JSON.stringify(library),
+                habits: "{}",
+                schedule: "[]",
+                notes: "LIBRARY_DOC",
+                score: "0",
+                priorities: ""
+            };
+            if (existing.total > 0) {
+                await databases.updateDocument(DATABASE_ID, COLLECTION_ID, existing.documents[0].$id, payload);
+            } else {
+                await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), payload);
+            }
+        } catch (e) {
+            console.error("saveLibrary Error:", e);
+        }
     }
 };

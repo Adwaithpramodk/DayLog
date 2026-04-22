@@ -9,6 +9,8 @@ const state = {
   dayData: { tasks: [], habits: {}, schedule: [], notes: "", score: 0 },
   history: {},
   settings: { habits: ["Exercise", "Read", "Meditate", "Water", "Sleep 8h"] },
+  roadmaps: [],
+  library: [],
   isLoggingIn: false
 };
 
@@ -99,6 +101,9 @@ function renderHistory() {
   let bestDayName = "—";
   
   Object.keys(state.history).forEach(date => {
+    // Only process actual date-based daily logs (YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    
     const data = state.history[date];
     const done = (data.tasks || []).filter(t => t.completed).length;
     totalTasksDone += done;
@@ -140,23 +145,228 @@ function renderHistory() {
     setTimeout(() => { bar.style.height = `${h}%`; }, i * 50);
   });
 
-  // 4. List Items
+  // 4. Render Heatmap
+  renderHeatmap();
 
-  // 4. List History Items
-  Object.keys(state.history).sort().reverse().slice(0, 10).forEach(date => {
+  // 5. List Items (Grouped by Month)
+  let lastMonth = "";
+  Object.keys(state.history).sort().reverse().slice(0, 30).forEach(date => {
+    // Only process actual date-based daily logs (YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    
+    // Check for month change
+    const dObj = new Date(date);
+    const monthYear = dObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+    
+    if (monthYear !== lastMonth) {
+      const monthHeader = document.createElement("div");
+      monthHeader.style = "font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: var(--text-3); margin: 32px 0 16px 8px; border-left: 2px solid var(--accent); padding-left: 12px;";
+      monthHeader.textContent = monthYear;
+      list.appendChild(monthHeader);
+      lastMonth = monthYear;
+    }
+
     const scoreVal = state.history[date].score !== undefined ? state.history[date].score : state.history[date];
     const div = document.createElement("div");
     div.className = "card";
-    div.style = "margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding: 16px;";
+    div.style = "margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding: 16px; border-left: 1px solid var(--border);";
     div.innerHTML = `
       <div>
         <div style="font-weight: 600;">${date}</div>
-        <div style="font-size: 12px; color: var(--text-2)">Productivity Score</div>
+        <div style="font-size: 12px; color: var(--text-2)">Daily Score</div>
       </div>
       <div style="font-family: var(--font-display); font-size: 24px; color: var(--accent)">${scoreVal}%</div>
     `;
     list.appendChild(div);
   });
+}
+
+function renderHeatmap() {
+  const container = $("#heatmap-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  // Render January to December of the current year
+  for (let m = 0; m < 12; m++) {
+    const d = new Date(currentYear, m, 1);
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const monthName = d.toLocaleString('default', { month: 'long' });
+
+    const monthWrapper = document.createElement("div");
+    monthWrapper.style = "margin-bottom: 24px;";
+    container.appendChild(monthWrapper);
+
+    // 1. Month Header
+    const header = document.createElement("div");
+    header.style = "font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;";
+    header.innerHTML = `<span>${monthName} ${year}</span>`;
+    monthWrapper.appendChild(header);
+
+    // 2. The Unified Grid (Labels + Squares)
+    const grid = document.createElement("div");
+    grid.style = "display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;";
+    monthWrapper.appendChild(grid);
+
+    // Add Weekday Labels
+    ["S", "M", "T", "W", "T", "F", "S"].forEach(l => {
+      const lbl = document.createElement("div");
+      lbl.style = "font-size: 10px; font-weight: 800; color: var(--text-3); text-align: center; margin-bottom: 6px;";
+      lbl.textContent = l;
+      grid.appendChild(lbl);
+    });
+    
+    // Get calendar info
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Padding
+    for (let p = 0; p < firstDay; p++) {
+      const empty = document.createElement("div");
+      empty.style.opacity = "0";
+      grid.appendChild(empty);
+    }
+
+    // Actual days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayData = state.history[dateStr];
+      const score = dayData ? (dayData.score !== undefined ? dayData.score : (typeof dayData === 'number' ? dayData : 0)) : 0;
+
+      let level = 0;
+      if (score > 0) level = 1;
+      if (score > 40) level = 2;
+      if (score > 75) level = 3;
+
+      const square = document.createElement("div");
+      square.className = `heat-square level-${level}`;
+      square.title = `${dateStr}: ${score}%`;
+      grid.appendChild(square);
+    }
+  }
+}
+
+function renderRoadmaps() {
+  const list = $("#roadmap-list");
+  if (!list) return;
+  list.innerHTML = "";
+
+  if (state.roadmaps.length === 0) {
+    list.innerHTML = `<div style="text-align:center; padding: 40px 0; color: var(--text-3); font-size: 14px;">No active plans. Create your first roadmap!</div>`;
+    return;
+  }
+
+  state.roadmaps.forEach((rm, rmIdx) => {
+    const doneSteps = rm.steps.filter(s => s.completed).length;
+    const progress = rm.steps.length ? Math.round((doneSteps / rm.steps.length) * 100) : 0;
+
+    const card = document.createElement("div");
+    card.className = "roadmap-card";
+    card.innerHTML = `
+      <div class="roadmap-header">
+        <div class="roadmap-name">${rm.title}</div>
+        <div class="roadmap-pct">${progress}%</div>
+      </div>
+      <div class="roadmap-bar-bg">
+        <div class="roadmap-bar-fill" style="width: ${progress}%"></div>
+      </div>
+      <div class="roadmap-steps">
+        ${rm.steps.map((s, sIdx) => `
+          <div class="roadmap-step-container" style="margin-bottom: 16px;">
+            <div class="roadmap-step ${s.completed ? "done" : ""}" data-rm="${rmIdx}" data-step="${sIdx}" style="display: flex; align-items: flex-start; gap: 14px;">
+              <div style="width: 22px; height: 22px; border: 2px solid ${s.completed ? "var(--accent)" : "var(--border)"}; border-radius: 40%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                ${s.completed ? '<div style="width: 12px; height: 12px; background: var(--accent); border-radius: 20%;"></div>' : ''}
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                <span style="font-weight: 700; font-size: 16px; line-height: 1.2;">${s.title}</span>
+                ${s.desc ? `
+                  <div style="font-size: 13px; color: var(--text-2); background: var(--surface-2); padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); line-height: 1.4; margin-top: 4px;">
+                    ${s.desc}
+                  </div>
+                ` : ""}
+              </div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+
+      <div style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--border);">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Milestone Title</label>
+          <input type="text" class="form-input roadmap-step-input" placeholder="What's the next big step?" data-rm="${rmIdx}" style="padding: 14px 16px; font-size: 15px;">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Extra Details (Optional)</label>
+          <textarea class="form-input roadmap-step-desc" placeholder="Add notes, links, or sub-tasks..." data-rm="${rmIdx}" style="padding: 14px 16px; font-size: 15px;"></textarea>
+        </div>
+        <button class="btn-primary btn-add-step-ui" data-rm="${rmIdx}" style="width: 100%; padding: 16px; font-size: 14px; font-weight: 700;">Add Milestone</button>
+      </div>
+
+      <div style="display: flex; justify-content: center; margin-top: 16px;">
+        <button class="btn-roadmap-del" data-rm="${rmIdx}">Delete this whole plan</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+async function syncRoadmaps() {
+  if (state.uid) {
+    await dbActions.saveRoadmaps(state.uid, state.roadmaps);
+  }
+}
+
+function renderLibrary() {
+  const list = $("#book-list");
+  if (!list) return;
+  list.innerHTML = "";
+
+  if (state.library.length === 0) {
+    list.innerHTML = `<div style="text-align:center; padding: 40px 0; color: var(--text-3); font-size: 14px;">Your library is empty. Start your first book!</div>`;
+    return;
+  }
+
+  state.library.forEach((book, bIdx) => {
+    const progress = book.totalPages ? Math.round((book.currentPage / book.totalPages) * 100) : 0;
+
+    const card = document.createElement("div");
+    card.className = "book-card";
+    card.innerHTML = `
+      <div class="book-header">
+        <div class="book-title">${book.title}</div>
+        <div class="book-stats">Page ${book.currentPage} of ${book.totalPages}</div>
+      </div>
+      
+      <div class="book-progress-info">
+        <div class="book-pct">${progress}% Read</div>
+      </div>
+      <div class="book-bar-bg">
+        <div class="book-bar-fill" style="width: ${progress}%"></div>
+      </div>
+
+      <div class="book-controls">
+        <button class="btn-book-step" data-action="dec" data-idx="${bIdx}">-</button>
+        <div class="book-input-group">
+          <input type="number" class="form-input book-current-input" value="${book.currentPage}" data-idx="${bIdx}">
+        </div>
+        <button class="btn-book-step" data-action="inc" data-idx="${bIdx}" style="background: var(--green); color: white;">+</button>
+      </div>
+
+      <div style="display: flex; justify-content: center;">
+        <button class="btn-book-del" data-idx="${bIdx}">Remove Book</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+async function syncLibrary() {
+  if (state.uid) {
+    await dbActions.saveLibrary(state.uid, state.library);
+  }
 }
 
 async function syncDay() {
@@ -410,6 +620,22 @@ async function onAuthChange(user) {
       
       // 2. LOAD DATA IN BACKGROUND
       showLoading(true);
+      
+      // Sync Settings
+      const cloudSettings = await dbActions.getSettings(state.uid);
+      if (cloudSettings) {
+        state.settings.habits = cloudSettings;
+        localStorage.setItem("daylog_settings", JSON.stringify(state.settings));
+      }
+
+      // Sync Roadmaps
+      const cloudRoadmaps = await dbActions.getRoadmaps(state.uid);
+      if (cloudRoadmaps) state.roadmaps = cloudRoadmaps;
+
+      // Sync Library
+      const cloudLibrary = await dbActions.getLibrary(state.uid);
+      if (cloudLibrary) state.library = cloudLibrary;
+
       await loadDayData(state.today);
       showLoading(false);
       toast("Synced with Cloud", "success");
@@ -419,9 +645,9 @@ async function onAuthChange(user) {
       $("#app-screen").classList.remove("active");
       state.uid = null;
     }
+    renderAll();
   } catch (err) {
     console.error("onAuthChange CRASH:", err);
-    // Force show app anyway
     $("#auth-screen").classList.remove("active");
     $("#app-screen").classList.add("active");
     renderAll();
@@ -541,6 +767,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+
+  // Handle Tab Switching
   document.querySelectorAll(".nav-item").forEach(item => {
     item.onclick = () => {
       const tab = item.dataset.tab;
@@ -548,9 +776,33 @@ document.addEventListener("DOMContentLoaded", () => {
       item.classList.add("active");
       document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
       $(`#panel-${tab}`).classList.add("active");
-      if (tab === "history") renderHistory();
+      
+      // RESET SCROLL TO TOP
+      window.scrollTo(0, 0);
+      
+      if (tab === "report") renderHistory();
+      if (tab === "roadmap") renderRoadmaps();
+      if (tab === "library") renderLibrary();
     };
   });
+
+  // LIBRARY EVENTS
+  $("#btn-show-add-book").onclick = () => $("#book-overlay").classList.add("active");
+  $("#btn-close-book").onclick = () => $("#book-overlay").classList.remove("active");
+
+  $("#add-book-form").onsubmit = (e) => {
+    e.preventDefault();
+    const title = $("#new-book-title").value.trim();
+    const pages = parseInt($("#new-book-pages").value);
+    if (title && pages) {
+      state.library.push({ title, totalPages: pages, currentPage: 0 });
+      syncLibrary();
+      renderLibrary();
+      $("#add-book-form").reset();
+      $("#book-overlay").classList.remove("active");
+      toast("Book Added!", "success");
+    }
+  };
 
   $("#btn-add-slot").onclick = () => {
     const lastSlot = state.dayData.schedule[state.dayData.schedule.length - 1];
@@ -572,6 +824,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (val && !state.settings.habits.includes(val)) {
       state.settings.habits.push(val);
       localStorage.setItem("daylog_settings", JSON.stringify(state.settings));
+      dbActions.saveSettings(state.uid, state.settings.habits); // Sync to Cloud
       $("#new-habit-input").value = "";
       renderSettings();
       renderAll();
@@ -584,7 +837,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedSettings = localStorage.getItem("daylog_settings");
   if (savedSettings) state.settings = JSON.parse(savedSettings);
 
-  // GLOBAL CLICK HANDLER
+  // ROADMAP EVENTS
+  $("#btn-show-add-roadmap").onclick = () => $("#roadmap-overlay").classList.add("active");
+  $("#btn-close-roadmap").onclick = () => $("#roadmap-overlay").classList.remove("active");
+
+  $("#add-roadmap-form").onsubmit = (e) => {
+    e.preventDefault();
+    const input = $("#new-roadmap-title");
+    const title = input.value.trim();
+    if (title) {
+      state.roadmaps.push({ title, steps: [] });
+      syncRoadmaps();
+      renderRoadmaps();
+      input.value = "";
+      $("#roadmap-overlay").classList.remove("active");
+      toast("Plan Created!", "success");
+    }
+  };
+
   document.addEventListener("click", async (e) => {
     // Logout (Nuclear Fix)
     if (e.target.closest("#btn-logout")) {
@@ -614,8 +884,109 @@ document.addEventListener("DOMContentLoaded", () => {
       const habit = e.target.dataset.habit;
       state.settings.habits = state.settings.habits.filter(h => h !== habit);
       localStorage.setItem("daylog_settings", JSON.stringify(state.settings));
+      dbActions.saveSettings(state.uid, state.settings.habits); // Sync to Cloud
       renderSettings();
       renderAll();
+    }
+
+    // --- ROADMAP HANDLERS (Modern UI) ---
+    
+    // Add Step via Button
+    if (e.target.classList.contains("btn-add-step-ui")) {
+      const rmIdx = e.target.dataset.rm;
+      const input = document.querySelector(`.roadmap-step-input[data-rm="${rmIdx}"]`);
+      const descInput = document.querySelector(`.roadmap-step-desc[data-rm="${rmIdx}"]`);
+      
+      const title = input.value.trim();
+      const desc = descInput.value.trim();
+      
+      if (title) {
+        state.roadmaps[rmIdx].steps.push({ title, desc, completed: false });
+        syncRoadmaps();
+        renderRoadmaps();
+        toast("Milestone Added", "success");
+      }
+    }
+
+    // Toggle Step
+    const stepEl = e.target.closest(".roadmap-step");
+    if (stepEl) {
+      const rmIdx = stepEl.dataset.rm;
+      const stepIdx = stepEl.dataset.step;
+      state.roadmaps[rmIdx].steps[stepIdx].completed = !state.roadmaps[rmIdx].steps[stepIdx].completed;
+      syncRoadmaps();
+      renderRoadmaps();
+    }
+
+    // Delete Roadmap
+    if (e.target.classList.contains("btn-roadmap-del")) {
+      if (confirm("Delete this roadmap?")) {
+        const rmIdx = e.target.dataset.rm;
+        state.roadmaps.splice(rmIdx, 1);
+        syncRoadmaps();
+        renderRoadmaps();
+      }
+    }
+
+    // --- LIBRARY HANDLERS ---
+    
+    // Increment/Decrement
+    if (e.target.classList.contains("btn-book-step")) {
+      const idx = e.target.dataset.idx;
+      const action = e.target.dataset.action;
+      if (action === "inc") {
+        if (state.library[idx].currentPage < state.library[idx].totalPages) {
+          state.library[idx].currentPage++;
+        }
+      } else {
+        if (state.library[idx].currentPage > 0) {
+          state.library[idx].currentPage--;
+        }
+      }
+      syncLibrary();
+      renderLibrary();
+    }
+
+    // Delete Book
+    if (e.target.classList.contains("btn-book-del")) {
+      if (confirm("Remove this book from your library?")) {
+        const idx = e.target.dataset.idx;
+        state.library.splice(idx, 1);
+        syncLibrary();
+        renderLibrary();
+      }
+    }
+  });
+
+  // Manual Page Input
+  document.addEventListener("input", (e) => {
+    if (e.target.classList.contains("book-current-input")) {
+      const idx = e.target.dataset.idx;
+      let val = parseInt(e.target.value) || 0;
+      if (val < 0) val = 0;
+      if (val > state.library[idx].totalPages) val = state.library[idx].totalPages;
+      state.library[idx].currentPage = val;
+      syncLibrary();
+      // Don't render while typing to avoid losing focus, but maybe update progress bar
+      const card = e.target.closest(".book-card");
+      const progress = Math.round((val / state.library[idx].totalPages) * 100);
+      card.querySelector(".book-bar-fill").style.width = `${progress}%`;
+      card.querySelector(".book-pct").textContent = `${progress}% Read`;
+      card.querySelector(".book-stats").textContent = `Page ${val} of ${state.library[idx].totalPages}`;
+    }
+  });
+
+  // Handle Enter Key in Milestone Input
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.classList.contains("roadmap-step-input")) {
+      const rmIdx = e.target.dataset.rm;
+      const title = e.target.value.trim();
+      if (title) {
+        state.roadmaps[rmIdx].steps.push({ title, completed: false });
+        syncRoadmaps();
+        renderRoadmaps();
+        toast("Milestone Added", "success");
+      }
     }
   });
 

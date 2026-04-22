@@ -177,20 +177,109 @@
             <h2 class="card-title">Productivity Trend</h2>
             <div id="history-chart" style="min-height: 140px;"></div>
           </div>
-          
-          <!-- 3. Past Scores -->
+
+          <!-- 3. Monthly Heatmap -->
+          <div class="card">
+            <h2 class="card-title">Consistency Heatmap</h2>
+            <div id="heatmap-container" class="heatmap-container"></div>
+            <div class="heatmap-legend">
+              <span>Less</span>
+              <div class="heat-square level-0"></div>
+              <div class="heat-square level-1"></div>
+              <div class="heat-square level-2"></div>
+              <div class="heat-square level-3"></div>
+              <span>More</span>
+            </div>
+          </div>
+
+          <!-- 4. Past Scores -->
           <h2 class="card-title" style="margin: 32px 24px 16px;">Past Daily Scores</h2>
           <div id="history-list" class="history-list"></div>
         </div>
+
+        <div id="panel-roadmap" class="tab-panel">
+          <div
+            style="margin-top: 32px; margin-bottom: 16px; padding: 0 24px; display: flex; justify-content: space-between; align-items: center;">
+            <h2 class="card-title" style="margin: 0;">Goal Roadmaps</h2>
+            <button id="btn-show-add-roadmap" class="btn-icon"
+              style="width: 36px; height: 36px; background: var(--accent); color: white; border-radius: 10px;">
+              <span style="font-size: 20px; font-weight: 400;">+</span>
+            </button>
+          </div>
+          <div id="roadmap-list" class="roadmap-list" style="padding: 0 16px;">
+            <!-- Roadmaps will appear here -->
+          </div>
+        </div>
+
+        <div id="panel-library" class="tab-panel">
+          <div
+            style="margin-top: 32px; margin-bottom: 16px; padding: 0 24px; display: flex; justify-content: space-between; align-items: center;">
+            <h2 class="card-title" style="margin: 0;">My Library</h2>
+            <button id="btn-show-add-book" class="btn-icon"
+              style="width: 36px; height: 36px; background: var(--accent); color: white; border-radius: 10px;">
+              <span style="font-size: 20px; font-weight: 400;">+</span>
+            </button>
+          </div>
+          <div id="book-list" class="book-list" style="padding: 0 16px;">
+            <!-- Books will appear here -->
+          </div>
+        </div>
       </div>
     </main>
+
+    <!-- Roadmap Overlay -->
+    <div id="roadmap-overlay" class="overlay">
+      <div class="overlay-content">
+        <div class="overlay-header">
+          <h2>Create New Plan</h2>
+          <button id="btn-close-roadmap" class="btn-close">×</button>
+        </div>
+        <form id="add-roadmap-form">
+          <div class="form-group">
+            <label>Roadmap Title</label>
+            <input type="text" id="new-roadmap-title" class="form-input"
+              placeholder="e.g., Master Spanish, Gym 100 Days..." required>
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; padding: 16px;">Create Roadmap</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Book Overlay -->
+    <div id="book-overlay" class="overlay">
+      <div class="overlay-content">
+        <div class="overlay-header">
+          <h2>Add New Book</h2>
+          <button id="btn-close-book" class="btn-close">×</button>
+        </div>
+        <form id="add-book-form">
+          <div class="form-group">
+            <label>Book Title</label>
+            <input type="text" id="new-book-title" class="form-input" placeholder="e.g., Atomic Habits, Deep Work..."
+              required>
+          </div>
+          <div class="form-group">
+            <label>Total Pages</label>
+            <input type="number" id="new-book-pages" class="form-input" placeholder="Total pages in the book" required>
+          </div>
+          <button type="submit" class="btn-primary" style="width: 100%; padding: 16px;">Add to
+            Library</button>
+        </form>
+      </div>
+    </div>
 
     <nav class="bottom-nav">
       <button class="nav-item active" data-tab="dashboard">
         <span>Today</span>
       </button>
+      <button class="nav-item" data-tab="roadmap">
+        <span>Roadmap</span>
+      </button>
+      <button class="nav-item" data-tab="library">
+        <span>Library</span>
+      </button>
       <button class="nav-item" data-tab="history">
-        <span>History</span>
+        <span>Report</span>
       </button>
     </nav>
   </div>
