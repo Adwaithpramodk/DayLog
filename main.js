@@ -9,6 +9,7 @@ const state = {
   dayData: { tasks: [], habits: {}, schedule: [], notes: "", score: 0 },
   history: {},
   settings: { habits: ["Exercise", "Read", "Meditate", "Water", "Sleep 8h"] },
+  globalSchedule: JSON.parse(localStorage.getItem("daylog_global_schedule")) || [],
   roadmaps: [],
   library: [],
   isLoggingIn: false
@@ -38,19 +39,48 @@ const toast = (msg, type = "info") => {
 
 async function loadDayData(date) {
   if (!state.uid) return;
-  const data = await dbActions.getDay(state.uid, date);
+  // Always use today if no date navigation
+  const targetDate = state.today; 
+  const data = await dbActions.getDay(state.uid, targetDate);
+  
+  // Load Global Schedule structure
+  const globalSched = state.globalSchedule;
+  
   if (data) {
+    const dailySched = typeof data.schedule === 'string' ? JSON.parse(data.schedule) : (data.schedule || []);
+    
+    // Merge: Use global tasks/times but daily 'done' status
+    const mergedSchedule = globalSched.map((globalSlot, idx) => {
+      const dailyMatch = dailySched[idx] || {};
+      return {
+        ...globalSlot,
+        done: dailyMatch.done || false
+      };
+    });
+
     state.dayData = {
       ...data,
       tasks: typeof data.tasks === 'string' ? JSON.parse(data.tasks) : data.tasks,
       habits: typeof data.habits === 'string' ? JSON.parse(data.habits) : data.habits,
-      schedule: typeof data.schedule === 'string' ? JSON.parse(data.schedule) : (data.schedule || [])
+      schedule: mergedSchedule
     };
   } else {
-    state.dayData = { tasks: [], habits: {}, notes: "", score: 0 };
+    // New day: all global slots are 'not done'
+    state.dayData = { 
+      tasks: [], 
+      habits: {}, 
+      notes: "", 
+      score: 0,
+      schedule: globalSched.map(s => ({ ...s, done: false }))
+    };
   }
   renderAll();
-  loadHistory(); // Load history in background
+  loadHistory();
+}
+
+function saveGlobalSchedule() {
+  localStorage.setItem("daylog_global_schedule", JSON.stringify(state.globalSchedule));
+  // Optional: Sync to cloud settings if needed
 }
 
 async function loadHistory() {
@@ -59,7 +89,10 @@ async function loadHistory() {
     const data = await dbActions.getHistory(state.uid);
     state.history = data || {};
     
-    state.history[state.activeDate] = calculateScore();
+    state.history[state.activeDate] = { 
+      score: calculateScore(),
+      habits: { ...state.dayData.habits } 
+    };
     renderHistory();
   } catch (e) {
     console.error("History load failed", e);
@@ -150,7 +183,10 @@ function renderHistory() {
   // 4. Render Heatmap
   renderHeatmap();
 
-  // 5. List Items (Grouped by Month)
+  // 5. Render Habit Stats
+  renderHabitStats();
+
+  // 6. List Items (Grouped by Month)
   let lastMonth = "";
   Object.keys(state.history).sort().reverse().slice(0, 30).forEach(date => {
     // Only process actual date-based daily logs (YYYY-MM-DD)
@@ -180,6 +216,57 @@ function renderHistory() {
       <div style="font-family: var(--font-display); font-size: 24px; color: var(--accent)">${scoreVal}%</div>
     `;
     list.appendChild(div);
+  });
+}
+
+function renderHabitStats() {
+  const container = $("#habit-stats-list");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const habits = state.settings.habits || [];
+  const historyEntries = Object.entries(state.history).filter(([date]) => /^\d{4}-\d{2}-\d{2}$/.test(date));
+  const totalDays = historyEntries.length;
+
+  if (totalDays === 0) {
+    container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-3); font-size: 13px;">Complete your first day to see habit analytics.</div>`;
+    return;
+  }
+
+  habits.forEach(habit => {
+    let completedCount = 0;
+    historyEntries.forEach(([date, dayData]) => {
+      // Robust check: Handle both object and legacy number formats
+      let dayHabits = {};
+      if (dayData && typeof dayData === 'object' && dayData.habits) {
+        dayHabits = typeof dayData.habits === 'string' ? JSON.parse(dayData.habits) : dayData.habits;
+      }
+      if (dayHabits[habit]) completedCount++;
+    });
+
+    const pct = Math.round((completedCount / totalDays) * 100);
+
+    const card = document.createElement("div");
+    card.className = "habit-stat-card";
+    card.innerHTML = `
+      <div class="habit-stat-header">
+        <span>${habit}</span>
+        <span class="habit-stat-pct">${pct}%</span>
+      </div>
+      <div class="habit-stat-bar-bg">
+        <div class="habit-stat-bar-fill" style="width: 0%"></div>
+      </div>
+      <div style="font-size: 11px; color: var(--text-3); margin-top: 8px;">
+        Completed ${completedCount} of ${totalDays} days tracked
+      </div>
+    `;
+    container.appendChild(card);
+
+    // Animate bar
+    setTimeout(() => {
+      const fill = card.querySelector(".habit-stat-bar-fill");
+      if (fill) fill.style.width = `${pct}%`;
+    }, 100);
   });
 }
 
@@ -385,14 +472,7 @@ async function syncDay() {
 
 const debouncedSync = debounce(syncDay, 1000);
 
-async function changeDate(offset) {
-  const d = new Date(state.activeDate);
-  d.setDate(d.getDate() + offset);
-  state.activeDate = d.toISOString().split("T")[0];
-  showLoading(true);
-  await loadDayData(state.activeDate);
-  showLoading(false);
-}
+// changeDate removed
 
 // ── UI ───────────────────────────────────────────────────────
 
@@ -412,7 +492,7 @@ function calculateStreak() {
 
 function renderAll() {
   try {
-    $("#active-date").textContent = state.activeDate === state.today ? "Today" : state.activeDate;
+    // active-date display logic removed
     
     const score = calculateScore();
     if ($("#score-value")) $("#score-value").textContent = score;
@@ -566,17 +646,32 @@ function renderSchedule() {
     };
     div.querySelectorAll(".slot-time-input").forEach(input => {
       input.onchange = (e) => {
-        state.dayData.schedule[i][e.target.dataset.key] = e.target.value;
+        const val = e.target.value;
+        const key = e.target.dataset.key;
+        state.dayData.schedule[i][key] = val;
+        // Update GLOBAL structure too
+        if (state.globalSchedule[i]) {
+          state.globalSchedule[i][key] = val;
+          saveGlobalSchedule();
+        }
         renderSchedule();
         debouncedSync();
       };
     });
     div.querySelector(".slot-task-input").onchange = (e) => {
-      state.dayData.schedule[i].task = e.target.value;
+      const val = e.target.value;
+      state.dayData.schedule[i].task = val;
+      // Update GLOBAL structure too
+      if (state.globalSchedule[i]) {
+        state.globalSchedule[i].task = val;
+        saveGlobalSchedule();
+      }
       debouncedSync();
     };
     div.querySelector(".btn-delete").onclick = () => {
       state.dayData.schedule.splice(i, 1);
+      state.globalSchedule.splice(i, 1);
+      saveGlobalSchedule();
       renderSchedule();
       debouncedSync();
     };
@@ -758,16 +853,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // Tab Switching (Bottom Nav)
-  $("#btn-prev-day").onclick = () => changeDate(-1);
-  $("#btn-next-day").onclick = () => changeDate(1);
-  
-  const btnGoToday = $("#btn-go-today");
-  if (btnGoToday) {
-    btnGoToday.onclick = () => {
-      state.activeDate = state.today;
-      loadDayData(state.activeDate);
-    };
-  }
+  // Date switching removed per request
 
 
   // Handle Tab Switching
@@ -823,14 +909,17 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   $("#btn-add-slot").onclick = () => {
-    const lastSlot = state.dayData.schedule[state.dayData.schedule.length - 1];
+    const lastSlot = state.globalSchedule[state.globalSchedule.length - 1];
     let start = "09:00", end = "10:00";
     if (lastSlot) {
       start = lastSlot.end;
       const [h, m] = lastSlot.end.split(":").map(Number);
       end = `${String(h + 1).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
-    state.dayData.schedule.push({ start, end, task: "", done: false });
+    const newSlot = { start, end, task: "", done: false };
+    state.globalSchedule.push(newSlot);
+    state.dayData.schedule.push({ ...newSlot });
+    saveGlobalSchedule();
     renderSchedule();
     debouncedSync();
   };
@@ -897,6 +986,67 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
     
+    // Reset Day
+    if (e.target.closest("#btn-reset-day")) {
+      if (confirm("This will clear all checkboxes for today. Your schedule timetable will stay. Continue?")) {
+        state.dayData.tasks.forEach(t => t.completed = false);
+        state.dayData.habits = {};
+        state.dayData.schedule.forEach(s => s.done = false);
+        state.dayData.notes = "";
+        state.dayData.score = 0;
+        
+        renderAll();
+        debouncedSync();
+        toast("Today's progress reset!", "success");
+        $("#settings-overlay").classList.remove("active");
+      }
+    }
+
+    // Master Wipe
+    if (e.target.closest("#btn-master-wipe")) {
+      const confirmed = confirm("CRITICAL: This will PERMANENTLY DELETE all your history, reports, and heatmap data. Your Habits and Schedule structure will remain. Are you 100% sure?");
+      if (confirmed) {
+        showLoading(true);
+        try {
+          // 1. Clear local state
+          state.history = {};
+          state.dayData.tasks = [];
+          state.dayData.habits = {};
+          if (state.dayData.schedule) {
+            state.dayData.schedule.forEach(s => s.done = false);
+          }
+          state.dayData.notes = "";
+          state.dayData.score = 0;
+          
+          // 2. Wipe Local Storage (Keep essentials)
+          const theme = localStorage.getItem("daylog_theme");
+          const settings = localStorage.getItem("daylog_settings");
+          const schedule = localStorage.getItem("daylog_global_schedule");
+          
+          localStorage.clear();
+          
+          if (theme) localStorage.setItem("daylog_theme", theme);
+          if (settings) localStorage.setItem("daylog_settings", settings);
+          if (schedule) localStorage.setItem("daylog_global_schedule", schedule);
+
+          // 3. Attempt cloud sync (Don't let failure stop the local purge)
+          try {
+            await syncDay();
+          } catch (cloudErr) {
+            console.warn("Cloud sync failed during purge, but local wipe continued.");
+          }
+          
+          toast("System Purged. Starting fresh!", "success");
+          setTimeout(() => location.reload(), 1000);
+        } catch (err) {
+          console.error("Master Wipe Error:", err);
+          toast("Something went wrong. Please try again.", "error");
+        } finally {
+          showLoading(false);
+        }
+      }
+    }
+
     // Delete Habit
     if (e.target.classList.contains("btn-delete-habit")) {
       const habit = e.target.dataset.habit;
@@ -975,6 +1125,78 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
+
+  // --- Day Explorer Logic ---
+  const datePicker = $("#history-date-picker");
+  if (datePicker) {
+    datePicker.onchange = async (e) => {
+      const selectedDate = e.target.value;
+      if (!selectedDate) return;
+
+      showLoading(true);
+      // 1. Check local history first
+      let data = state.history[selectedDate];
+      
+      // 2. If not in local memory or partial, try fetching from cloud
+      if (!data || !data.tasks) {
+        data = await dbActions.getDay(state.uid, selectedDate);
+        if (data && typeof data.tasks === 'string') {
+          data = {
+            ...data,
+            tasks: JSON.parse(data.tasks || '[]'),
+            habits: JSON.parse(data.habits || '{}'),
+            score: parseInt(data.score || 0)
+          };
+        }
+      }
+
+      showLoading(false);
+      
+      const detailView = $("#history-detail-view");
+      const emptyMsg = $("#history-empty-msg");
+
+      if (data && (data.tasks?.length > 0 || Object.keys(data.habits || {}).length > 0 || data.notes)) {
+        detailView.style.display = "block";
+        emptyMsg.style.display = "none";
+        
+        // Render Score
+        const score = data.score || 0;
+        $("#history-score-text").textContent = `${score}%`;
+        $("#history-score-bar").style.width = `${score}%`;
+
+        // Render Tasks/Habits
+        const list = $("#history-tasks-list");
+        list.innerHTML = "";
+        
+        // Habits
+        const habits = data.habits || {};
+        Object.entries(habits).forEach(([name, done]) => {
+          if (done) {
+            const item = document.createElement("div");
+            item.style = "display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--accent); font-weight: 600; background: var(--accent-soft); padding: 8px 12px; border-radius: 10px;";
+            item.innerHTML = `<span>✓</span> <span>${name}</span>`;
+            list.appendChild(item);
+          }
+        });
+
+        // Tasks
+        const tasks = data.tasks || [];
+        tasks.forEach(t => {
+          const item = document.createElement("div");
+          item.style = `display: flex; align-items: center; gap: 10px; font-size: 14px; padding: 8px 12px; border-radius: 10px; background: ${t.completed ? 'var(--surface-2)' : 'transparent'}; border: 1px solid ${t.completed ? 'transparent' : 'var(--border)'}; color: ${t.completed ? 'var(--text-2)' : 'var(--text-3)'};`;
+          item.innerHTML = `<span>${t.completed ? '●' : '○'}</span> <span>${t.text}</span>`;
+          list.appendChild(item);
+        });
+
+        // Render Notes
+        $("#history-notes-view").textContent = data.notes || "No journal entry for this day.";
+      } else {
+        detailView.style.display = "none";
+        emptyMsg.style.display = "block";
+        emptyMsg.innerHTML = `<div style="font-size: 24px; margin-bottom: 12px;">🔍</div> No data found for this date.`;
+      }
+    };
+  }
 
   // Manual Page Input
   document.addEventListener("input", (e) => {
