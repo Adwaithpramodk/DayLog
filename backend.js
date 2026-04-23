@@ -15,7 +15,7 @@ const COLLECTION_ID = 'daily_logs';
 
 export const authActions = {
     getUser: () => account.get(),
-    register: (email, pw) => account.create(ID.unique(), email, pw),
+    register: (email, pw, name) => account.create(ID.unique(), email, pw, name),
     login: (email, pw) => account.createEmailPasswordSession(email, pw),
     logout: () => account.deleteSessions(),
     onStateChange: (cb) => {

@@ -4,6 +4,7 @@ import { authActions, dbActions } from "./backend.js";
 const state = {
   uid: null,
   email: null,
+  name: null,
   today: new Date().toISOString().split("T")[0],
   activeDate: new Date().toISOString().split("T")[0],
   dayData: { tasks: [], habits: {}, schedule: [], notes: "", score: 0 },
@@ -565,15 +566,17 @@ function renderSummary() {
     .filter(s => !s.done && timeToMin(s.start) >= currentMin)
     .sort((a, b) => timeToMin(a.start) - timeToMin(b.start))[0];
 
-  if ($("#summary-next-task")) {
-    $("#summary-next-task").textContent = nextTask ? `${nextTask.start} – ${nextTask.task}` : "---";
-    $("#summary-next-task").style.opacity = nextTask ? "1" : "0.3";
+  if ($("#summary-greeting")) {
+    const firstName = state.name ? state.name.split(" ")[0] : "Friend";
+    $("#summary-greeting").textContent = `Hi ${firstName}!`;
   }
 
   // 2. Counts
   const tasksLeft = state.dayData.tasks.filter(t => !t.completed).length;
-  const habitsDone = Object.values(state.dayData.habits).filter(v => v === true).length;
-  const habitsTotal = state.settings.habits.length;
+  
+  const activeHabits = state.settings.habits || [];
+  const habitsDone = activeHabits.filter(h => state.dayData.habits[h] === true).length;
+  const habitsTotal = activeHabits.length;
   const habitsLeft = habitsTotal - habitsDone;
 
   if ($("#summary-tasks-left")) $("#summary-tasks-left").textContent = tasksLeft;
@@ -711,6 +714,7 @@ async function onAuthChange(user) {
       // 1. SWITCH SCREEN IMMEDIATELY
       state.uid = user.$id;
       state.email = user.email;
+      state.name = user.name || "User";
       $("#auth-screen").classList.remove("active");
       $("#app-screen").classList.add("active");
       
@@ -831,7 +835,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const session = await authActions.login(email, pw);
         console.log("LOGIN SUCCESS:", session);
       } else {
-        const userRes = await authActions.register(email, pw);
+        const name = $("#auth-name").value.trim() || "User";
+        const userRes = await authActions.register(email, pw, name);
         console.log("REGISTER SUCCESS:", userRes);
         const session = await authActions.login(email, pw);
         console.log("AUTO-LOGIN SUCCESS:", session);
@@ -862,6 +867,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("#auth-title").textContent = isLogin ? "Create Account" : "Welcome Back";
     $("#auth-submit").textContent = isLogin ? "Sign Up" : "Sign In";
     $("#toggle-auth-mode").textContent = isLogin ? "Have an account? Login" : "New here? Register";
+    $("#group-name").style.display = isLogin ? "block" : "none";
   };
 
   // App Events
