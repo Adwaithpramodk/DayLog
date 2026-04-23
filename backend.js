@@ -26,6 +26,11 @@ export const authActions = {
 };
 
 export const dbActions = {
+    subscribe(callback) {
+        return client.subscribe(`databases.${DATABASE_ID}.collections.${COLLECTION_ID}.documents`, res => {
+            callback(res);
+        });
+    },
     async getDay(uid, date) {
         try {
             const res = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
@@ -211,5 +216,26 @@ export const dbActions = {
         } catch (e) {
             console.error("saveLibrary Error:", e);
         }
+    },
+    async getGlobalSchedule(uid) {
+        try {
+            const res = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.equal('date', 'user_global_schedule')
+            ]);
+            if (res.total > 0) return JSON.parse(res.documents[0].schedule || '[]');
+            return null;
+        } catch (e) { return null; }
+    },
+    async saveGlobalSchedule(uid, schedule) {
+        try {
+            const existing = await databases.listDocuments(DATABASE_ID, COLLECTION_ID, [
+                Query.equal('uid', uid),
+                Query.equal('date', 'user_global_schedule')
+            ]);
+            const payload = { uid, date: 'user_global_schedule', schedule: JSON.stringify(schedule), tasks: "[]", habits: "{}", notes: "GLOBAL_SCHEDULE_DOC", score: "0", priorities: "" };
+            if (existing.total > 0) await databases.updateDocument(DATABASE_ID, COLLECTION_ID, existing.documents[0].$id, payload);
+            else await databases.createDocument(DATABASE_ID, COLLECTION_ID, ID.unique(), payload);
+        } catch (e) { console.error(e); }
     }
 };

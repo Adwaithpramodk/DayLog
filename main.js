@@ -12,7 +12,8 @@ const state = {
   globalSchedule: JSON.parse(localStorage.getItem("daylog_global_schedule")) || [],
   roadmaps: [],
   library: [],
-  isLoggingIn: false
+  isLoggingIn: false,
+  realtimeSubscription: null
 };
 
 const $ = (s) => document.querySelector(s);
@@ -80,7 +81,7 @@ async function loadDayData(date) {
 
 function saveGlobalSchedule() {
   localStorage.setItem("daylog_global_schedule", JSON.stringify(state.globalSchedule));
-  // Optional: Sync to cloud settings if needed
+  if (state.uid) dbActions.saveGlobalSchedule(state.uid, state.globalSchedule);
 }
 
 async function loadHistory() {
@@ -733,9 +734,69 @@ async function onAuthChange(user) {
       const cloudLibrary = await dbActions.getLibrary(state.uid);
       if (cloudLibrary) state.library = cloudLibrary;
 
+      // Sync Global Schedule (Timetable Structure)
+      const cloudGlobalSched = await dbActions.getGlobalSchedule(state.uid);
+      if (cloudGlobalSched) {
+        state.globalSchedule = cloudGlobalSched;
+        localStorage.setItem("daylog_global_schedule", JSON.stringify(state.globalSchedule));
+      }
+
       await loadDayData(state.today);
+      
+      // 3. START REALTIME LISTENER
+      if (state.realtimeSubscription) state.realtimeSubscription(); // Unsubscribe old
+      state.realtimeSubscription = dbActions.subscribe(res => {
+        const doc = res.payload;
+        console.log("Realtime Update Detected:", res.events);
+        
+        // Handle Daily Log Updates (Today)
+        if (doc.date === state.today && doc.uid === state.uid) {
+           const incomingTasks = JSON.stringify(JSON.parse(doc.tasks || '[]'));
+           const currentTasks = JSON.stringify(state.dayData.tasks);
+           const incomingHabits = JSON.stringify(JSON.parse(doc.habits || '{}'));
+           const currentHabits = JSON.stringify(state.dayData.habits);
+           
+           // Only update if data actually changed (prevent loops)
+           if (incomingTasks !== currentTasks || incomingHabits !== currentHabits || doc.notes !== state.dayData.notes) {
+             console.log("Applying Live Sync from other device...");
+             state.dayData = {
+               ...doc,
+               tasks: JSON.parse(doc.tasks || '[]'),
+               habits: JSON.parse(doc.habits || '{}'),
+               schedule: state.dayData.schedule // Keep local schedule merge logic
+             };
+             // Re-trigger merge logic for schedule done status
+             loadDayData(state.today); 
+           }
+        }
+        
+        // Handle Settings Updates
+        if (doc.date === 'user_settings' && doc.uid === state.uid) {
+          state.settings.habits = JSON.parse(doc.habits || '[]');
+          renderSettings();
+          renderAll();
+        }
+
+        // Handle Roadmap Updates
+        if (doc.date === 'user_roadmaps' && doc.uid === state.uid) {
+          state.roadmaps = JSON.parse(doc.tasks || '[]');
+          renderRoadmaps();
+        }
+
+        // Handle Global Schedule Updates (Timetable Structure)
+        if (doc.date === 'user_global_schedule' && doc.uid === state.uid) {
+          const incomingSched = JSON.parse(doc.schedule || '[]');
+          if (JSON.stringify(incomingSched) !== JSON.stringify(state.globalSchedule)) {
+             console.log("Applying Live Schedule Structure Sync...");
+             state.globalSchedule = incomingSched;
+             localStorage.setItem("daylog_global_schedule", JSON.stringify(state.globalSchedule));
+             loadDayData(state.today); // Re-render everything with new structure
+          }
+        }
+      });
+
       showLoading(false);
-      toast("Synced with Cloud", "success");
+      toast("Synced & Live ⚡", "success");
     } else {
       // DEFAULT: SHOW AUTH SCREEN
       $("#auth-screen").classList.add("active");
